@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Make a VPC 1
+
+Resources:
+  TutorialVPC:  # VPC 이름
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.0.0.0/16  # CIDR(Classless Inter-Domain Routing) 172.0.***.*** (0~255)
+      EnableDnsHostnames: true # DNS 활성화
+    
+  InternetGateway:  # 인터넷 게이트웨이 이름
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:  # 인터넷 게이트웨이를 VPC에 연결
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TutorialVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet01: # 외부망 서브넷
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TutorialVPC
+      CidrBlock: 172.0.0.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      
+  PrivateSubnet01: # 내부망 서브넷
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TutorialVPC
+      CidrBlock: 172.0.1.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+
+  PublicRouteTable: # 라우팅 테이블
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TutorialVPC
+
+  PublicRoute: # 외부에 접근할 수 있게 라우팅설정
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0   # All IP
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation1: # 서브넷과 라우팅 테이블 연결
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet01
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable: # 내부망 라우팅 테이블
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TutorialVPC
+
+  PrivateSubnetRouteTableAssociation1: # 내부망 서브넷과 라우팅 테이블 연결
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet01
+      RouteTableId: !Ref PrivateRouteTable
+
+
+Outputs:
+  VPC:
+    Description: Tutorial VPC ID
+    Value: !Ref TutorialVPC
+  AZ1:
+    Description: Availability Zone 1
+    Value: !GetAtt
+      - PublicSubnet01
+      - AvailabilityZone
